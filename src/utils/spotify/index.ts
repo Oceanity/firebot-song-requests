@@ -9,24 +9,6 @@ import { getErrorMessage } from "../string";
 import ResponseError from "@/models/responseError";
 import { SpotifySettingsService } from "./settings";
 import { SpotifyArtistService } from "./artist";
-import { trackSummaryFromDetails } from "./player/track";
-
-type SearchOptions = {
-  limit?: number;
-  offset?: number;
-  filterExplicit?: boolean;
-  maximumLength?: number;
-};
-
-type FilteredTrack = {
-  reason: "explicit" | "length";
-  track: SpotifyTrackDetails;
-};
-
-type SearchResponse = {
-  found: SpotifyTrackDetails;
-  filtered: FilteredTrack[];
-};
 
 export class SpotifyService {
   public readonly api: SpotifyApiService;
@@ -55,26 +37,22 @@ export class SpotifyService {
     await this.user.init();
   }
 
-  public async searchAsync(
+  public async searchAsync<T extends SpotifyContextType>(
     query: string,
-    types: SpotifyContextType[] | SpotifyContextType,
+    type: T,
     options: SearchOptions = {}
-  ): Promise<SearchResponse> {
+  ): Promise<SearchResponse<T>> {
     try {
-      if (!Array.isArray(types)) {
-        types = [types];
-      }
-
       const encodedQuery = encodeURIComponent(query);
 
       const params = new URLSearchParams({
         q: encodedQuery,
-        type: types.join(","),
+        type: type,
         limit: String(options.limit ?? 50),
         offset: String(options.offset ?? 0),
       }).toString();
 
-      const response = await this.api.fetch<SpotifySearchResponse>(
+      const response = await this.api.fetch<SpotifyAPISearchResponse>(
         `/search?${params}`
       );
 
@@ -82,37 +60,88 @@ export class SpotifyService {
         throw new Error("Could not retrieve Spotify track");
       }
 
-      let foundTrack: SpotifyTrackDetails | null = null;
-      const filteredTracks: FilteredTrack[] = [];
-      let maxLengthMs: number = options.maximumLength
-        ? options.maximumLength * 60 * 1000
-        : 0;
-
-      while (foundTrack === null) {
-        const track = response.data.tracks.items.shift();
-        if (!track) continue;
-
-        if (options.filterExplicit) {
-          filteredTracks.push({ reason: "explicit", track });
-          continue;
-        }
-
-        if (maxLengthMs > 0 && track.duration_ms < maxLengthMs) {
-          filteredTracks.push({ reason: "length", track });
-          continue;
-        }
-
-        foundTrack = track;
+      switch (type) {
+        case "track":
+          return this.getFirstTrack(
+            response.data,
+            options
+          ) as SearchResponse<T>;
+        case "artist":
+          return this.getFirstArtist(response.data) as SearchResponse<T>;
+        case "album":
+          return this.getFirstAlbum(response.data) as SearchResponse<T>;
+        case "playlist":
+          return this.getFirstPlaylist(response.data) as SearchResponse<T>;
+        default:
+          throw new Error("Invalid search type");
       }
-
-      return {
-        found: foundTrack,
-        filtered: filteredTracks,
-      };
     } catch (error) {
       logger.error(getErrorMessage(error), error);
       throw error;
     }
+  }
+
+  private getFirstTrack(
+    search: SpotifyAPISearchResponse,
+    options: SearchOptions
+  ): SearchResponse<"track"> {
+    let foundTrack: SpotifyTrackDetails | null = null;
+    const filteredTracks: FilteredEntry<SpotifyTrackDetails>[] = [];
+    let maxLengthMs: number = options.maximumLength
+      ? options.maximumLength * 60 * 1000
+      : 0;
+
+    while (foundTrack === null) {
+      const entry = search.tracks.items.shift();
+      if (!entry) continue;
+
+      const reasons: FilteredReason[] = [];
+      if (options.filterExplicit && entry.explicit) {
+        reasons.push("explicit");
+      }
+      if (maxLengthMs > 0 && entry.duration_ms < maxLengthMs) {
+        reasons.push("length");
+      }
+
+      if (reasons.length) {
+        filteredTracks.push({ reasons, entry });
+        continue;
+      }
+
+      foundTrack = entry;
+    }
+
+    return {
+      found: foundTrack,
+      filtered: filteredTracks,
+    };
+  }
+
+  private getFirstArtist(
+    search: SpotifyAPISearchResponse
+  ): SearchResponse<"artist"> {
+    return {
+      found: search.artists.items[0],
+      filtered: [],
+    };
+  }
+
+  private getFirstAlbum(
+    search: SpotifyAPISearchResponse
+  ): SearchResponse<"album"> {
+    return {
+      found: search.albums.items[0],
+      filtered: [],
+    };
+  }
+
+  private getFirstPlaylist(
+    search: SpotifyAPISearchResponse
+  ): SearchResponse<"playlist"> {
+    return {
+      found: search.playlists.items[0],
+      filtered: [],
+    };
   }
 
   public async getTrackAsync(id: string) {

@@ -28,8 +28,8 @@ export class SpotifyArtistService {
   }
 
   public async banArtistByName(name: string) {
-    const artist = (await this.spotify.searchAsync(name, "artist")).artists
-      .items[0];
+    const artist = (await this.spotify.searchAsync<"artist">(name, "artist"))
+      .found;
     await this.banArtistByUri(artist.uri);
   }
 }

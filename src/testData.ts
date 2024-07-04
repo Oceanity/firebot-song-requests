@@ -29,7 +29,7 @@ export const testImages: SpotifyImage[] = [
   },
 ];
 
-export const testSearchResponse = {
+export const testSpotifySearchResponse = {
   tracks: emptySearchCategory<SpotifyTrackDetails>(),
   artists: emptySearchCategory<SpotifyArtistDetails>(),
   albums: emptySearchCategory<SpotifyAlbumDetails>(),
@@ -129,6 +129,11 @@ export const getTestTrack = (
   id,
   uri: `spotify:track:${id}`,
 });
+
+export const testSearchResponse = {
+  found: getTestTrack(),
+  filtered: [],
+};
 
 export const getTestTrackSummary = (
   title: string = "some track",

@@ -131,7 +131,7 @@ export const SpotifyFindAndEnqueueTrackEffect: Firebot.EffectType<EffectParams> 
             spotifyTrack: trackSummaryFromDetails(track),
             rawFilteredTracks: response.filtered,
             filteredTracks: filtered.map((filtered) => ({
-              reason: filtered.reason,
+              reasons: filtered.reasons,
               ...trackSummaryFromDetails(filtered.track),
             })),
           },

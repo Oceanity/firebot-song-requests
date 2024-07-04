@@ -267,14 +267,4 @@ type SpotifySearchCategory<T> = {
   total: number;
   items: T[];
 };
-
-type SpotifySearchResponse = {
-  tracks: SpotifySearchCategory<SpotifyTrackDetails>;
-  artists: SpotifySearchCategory<SpotifyArtistDetails>;
-  albums: SpotifySearchCategory<SpotifyAlbumDetails>;
-  playlists: SpotifySearchCategory<SpotifyPlaylistDetails>;
-  shows: SpotifySearchCategory<SpotifyShowDetials>;
-  episodes: SpotifySearchCategory<SpotifyEpisodeDetails>;
-  audiobooks: SpotifySearchCategory<SpotifyAudiobookDetails>;
-};
 //#endregion

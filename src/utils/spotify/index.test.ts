@@ -1,7 +1,7 @@
 import "@/mocks/firebot";
 import { SpotifyService } from "@utils/spotify";
 import { jest } from "@jest/globals";
-import { getTestTrack, testSearchResponse } from "@/testData";
+import { getTestTrack, testSpotifySearchResponse } from "@/testData";
 import { logger } from "@utils/firebot";
 
 describe("Spotify Service", () => {
@@ -13,7 +13,11 @@ describe("Spotify Service", () => {
     jest
       .spyOn(spotify.api, "fetch")
       .mockReturnValue(
-        Promise.resolve({ ok: true, status: 200, data: testSearchResponse })
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          data: testSpotifySearchResponse,
+        })
       );
   });
 
@@ -25,11 +29,11 @@ describe("Spotify Service", () => {
     it("search returns search response", async () => {
       const response = await spotify.searchAsync("testing", "track");
 
-      expect(response).toBe(testSearchResponse);
+      expect(response).toBe(testSpotifySearchResponse);
     });
 
     it("search returns expected number of tracks", async () => {
-      testSearchResponse.tracks.items = [
+      testSpotifySearchResponse.tracks.items = [
         getTestTrack("track 1"),
         getTestTrack("track 2"),
         getTestTrack("track 3"),
