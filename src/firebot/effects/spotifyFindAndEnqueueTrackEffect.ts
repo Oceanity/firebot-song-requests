@@ -7,6 +7,7 @@ type EffectParams = {
   query: string;
   queuedBy: string;
   playlistId: string;
+  maximumLength: number;
   filterExplicit: boolean;
   allowDuplicates: boolean;
 };
@@ -51,7 +52,12 @@ export const SpotifyFindAndEnqueueTrackEffect: Firebot.EffectType<EffectParams> 
             input-title="Search"
             model="effect.query" 
             placeholder-text="Search query or link to track to add to your Spotify Queue"
-            style="border-radius:8px;overflow:hidden;" />
+            style="margin-bottom:15px;border-radius:8px;overflow:hidden;" />
+          <firebot-input 
+            input-title="Max Length (minutes)"
+            model="effect.maximumLength" 
+            placeholder-text="Maximum length of track that can be added"
+            style="margin-bottom:15px;border-radius:8px;overflow:hidden;" />
           <div style="display: flex; flex-direction: column; margin: 15px 0 0px;">
             <firebot-checkbox
               label="Exclude explicit tracks"
@@ -77,7 +83,13 @@ export const SpotifyFindAndEnqueueTrackEffect: Firebot.EffectType<EffectParams> 
     },
 
     onTriggerEvent: async (event) => {
-      const { query, queuedBy, allowDuplicates, filterExplicit } = event.effect;
+      const {
+        query,
+        queuedBy,
+        allowDuplicates,
+        filterExplicit,
+        maximumLength,
+      } = event.effect;
 
       try {
         const linkId = spotify.player.track.getIdFromTrackUrl(query);
@@ -87,8 +99,9 @@ export const SpotifyFindAndEnqueueTrackEffect: Firebot.EffectType<EffectParams> 
           : (
               await spotify.searchAsync(query, "track", {
                 filterExplicit,
+                maximumLength,
               })
-            ).tracks.items[0];
+            ).found;
 
         if (!track) throw new Error("Track not found");
 

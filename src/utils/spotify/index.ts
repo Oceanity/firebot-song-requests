@@ -9,12 +9,23 @@ import { getErrorMessage } from "../string";
 import ResponseError from "@/models/responseError";
 import { SpotifySettingsService } from "./settings";
 import { SpotifyArtistService } from "./artist";
+import { trackSummaryFromDetails } from "./player/track";
 
 type SearchOptions = {
   limit?: number;
   offset?: number;
   filterExplicit?: boolean;
-  maxLength?: number;
+  maximumLength?: number;
+};
+
+type FilteredTracks = {
+  reason: "explicit" | "length";
+  track: SpotifyTrackDetails;
+};
+
+type SearchResponse = {
+  found: SpotifyTrackDetails;
+  filtered: FilteredTracks[];
 };
 
 export class SpotifyService {
@@ -48,7 +59,7 @@ export class SpotifyService {
     query: string,
     types: SpotifyContextType[] | SpotifyContextType,
     options: SearchOptions = {}
-  ): Promise<SpotifySearchResponse> {
+  ): Promise<SearchResponse> {
     try {
       if (!Array.isArray(types)) {
         types = [types];
@@ -71,19 +82,33 @@ export class SpotifyService {
         throw new Error("Could not retrieve Spotify track");
       }
 
-      if (options.filterExplicit) {
-        response.data.tracks.items = response.data.tracks.items.filter(
-          (track) => !track.explicit
-        );
+      let foundTrack: SpotifyTrackDetails | null = null;
+      const filteredTracks: FilteredTracks[] = [];
+      let maxLengthMs: number = options.maximumLength
+        ? options.maximumLength * 60 * 1000
+        : 0;
+
+      while (foundTrack === null) {
+        const track = response.data.tracks.items.shift();
+        if (!track) continue;
+
+        if (options.filterExplicit) {
+          filteredTracks.push({ reason: "explicit", track });
+          continue;
+        }
+
+        if (maxLengthMs > 0 && track.duration_ms < maxLengthMs) {
+          filteredTracks.push({ reason: "length", track });
+          continue;
+        }
+
+        foundTrack = track;
       }
 
-      if (options.maxLength && options.maxLength > 0) {
-        response.data.tracks.items = response.data.tracks.items.filter(
-          (track) => track.duration_ms < options.maxLength! * 1000 * 60
-        );
-      }
-
-      return response.data;
+      return {
+        found: foundTrack,
+        filtered: filteredTracks,
+      };
     } catch (error) {
       logger.error(getErrorMessage(error), error);
       throw error;
