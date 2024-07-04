@@ -58,7 +58,7 @@ export const SpotifyChangeRepeatStateEffect: Firebot.EffectType<EffectParams> =
       const errors: string[] = [];
 
       if (!effect.repeatState) {
-        errors.push("Looping mode is required!");
+        errors.push("Repeat mode is required!");
       }
 
       return errors;
