@@ -18,14 +18,14 @@ type SearchOptions = {
   maximumLength?: number;
 };
 
-type FilteredTracks = {
+type FilteredTrack = {
   reason: "explicit" | "length";
   track: SpotifyTrackDetails;
 };
 
 type SearchResponse = {
   found: SpotifyTrackDetails;
-  filtered: FilteredTracks[];
+  filtered: FilteredTrack[];
 };
 
 export class SpotifyService {
@@ -83,7 +83,7 @@ export class SpotifyService {
       }
 
       let foundTrack: SpotifyTrackDetails | null = null;
-      const filteredTracks: FilteredTracks[] = [];
+      const filteredTracks: FilteredTrack[] = [];
       let maxLengthMs: number = options.maximumLength
         ? options.maximumLength * 60 * 1000
         : 0;

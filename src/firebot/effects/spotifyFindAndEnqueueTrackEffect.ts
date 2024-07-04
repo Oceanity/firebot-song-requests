@@ -34,6 +34,18 @@ export const SpotifyFindAndEnqueueTrackEffect: Firebot.EffectType<EffectParams> 
           defaultName: "spotifyTrack",
         },
         {
+          label: "Raw Filtered Tracks",
+          description:
+            "Objects containing raw track data and reason for filtering",
+          defaultName: "rawFilteredTracks",
+        },
+        {
+          label: "Filtered Tracks",
+          description:
+            "List of track summaries that were found before queued song but were filtered out",
+          defaultName: "filteredTracks",
+        },
+        {
           label: "Response Data",
           description:
             "Track information of the enqueued track if the procedure was successful, an error message if not.",
@@ -94,14 +106,14 @@ export const SpotifyFindAndEnqueueTrackEffect: Firebot.EffectType<EffectParams> 
       try {
         const linkId = spotify.player.track.getIdFromTrackUrl(query);
 
-        const track = linkId
-          ? await spotify.getTrackAsync(linkId)
-          : (
-              await spotify.searchAsync(query, "track", {
-                filterExplicit,
-                maximumLength,
-              })
-            ).found;
+        const response = linkId
+          ? { found: await spotify.getTrackAsync(linkId), filtered: [] }
+          : await spotify.searchAsync(query, "track", {
+              filterExplicit,
+              maximumLength,
+            });
+
+        const { found: track, filtered } = response;
 
         if (!track) throw new Error("Track not found");
 
@@ -117,6 +129,11 @@ export const SpotifyFindAndEnqueueTrackEffect: Firebot.EffectType<EffectParams> 
             trackWasEnqueued: true,
             spotifyResponse: track,
             spotifyTrack: trackSummaryFromDetails(track),
+            rawFilteredTracks: response.filtered,
+            filteredTracks: filtered.map((filtered) => ({
+              reason: filtered.reason,
+              ...trackSummaryFromDetails(filtered.track),
+            })),
           },
         };
       } catch (error) {
@@ -126,6 +143,8 @@ export const SpotifyFindAndEnqueueTrackEffect: Firebot.EffectType<EffectParams> 
             trackWasEnqueued: false,
             error: getErrorMessage(error),
             spotifyTrack: null,
+            rawFilteredTracks: [],
+            filteredTracks: [],
           },
         };
       }
